@@ -1,16 +1,12 @@
-from app.core.database import DbInstance
+import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import (
-    Column,
-    DateTime,
-    String,
-    ForeignKey
-)
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String
 from sqlalchemy.orm import relationship
-import uuid
 
-Base = DbInstance.get_base
+from app.core.database import BASE
+
+Base = BASE
 
 
 class Message(Base):
@@ -18,7 +14,9 @@ class Message(Base):
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     text = Column(String, nullable=False)
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    created_at = Column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
 
     user_id = Column(String, ForeignKey("users.id"), nullable=False)
     room_id = Column(String, ForeignKey("rooms.id"), nullable=False)
@@ -27,7 +25,9 @@ class Message(Base):
     room = relationship("Room", back_populates="messages")
 
     def __repr__(self):
-        return f"<Message(id={self.id}, user_id={self.user_id}, room_id={self.room_id})>"
+        return (
+            f"<Message(id={self.id}, user_id={self.user_id}, room_id={self.room_id})>"
+        )
 
 
 class Room(Base):
@@ -35,14 +35,16 @@ class Room(Base):
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     name = Column(String, nullable=False)
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-
+    is_private = Column(Boolean, default=False)
+    created_at = Column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
+    owner = Column(String, nullable=False)
     messages = relationship("Message", back_populates="room", cascade="all, delete")
     members = relationship("RoomMember", back_populates="room", cascade="all, delete")
 
     def __repr__(self):
         return f"<Room(id={self.id}, name='{self.name}')>"
-
 
 
 class RoomMember(Base):
@@ -51,7 +53,9 @@ class RoomMember(Base):
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     room_id = Column(String, ForeignKey("rooms.id"), nullable=False)
     user_id = Column(String, ForeignKey("users.id"), nullable=False)
-    joined_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    joined_at = Column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
 
     room = relationship("Room", back_populates="members")
     user = relationship("User", back_populates="rooms")
@@ -60,7 +64,21 @@ class RoomMember(Base):
         return f"<RoomMember(room_id={self.room_id}, user_id={self.user_id})>"
 
 
-#IGNORE THIS PLEASE 
+class RoomInvite(Base):
+    __tablename__ = "room_invites"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    room_id = Column(String, ForeignKey("rooms.id"), nullable=False)
+    invite_token = Column(String, nullable=False, unique=True)
+    expires_at = Column(DateTime(timezone=True))
+    created_at = Column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
+
+    room = relationship("Room")
+
+
+# IGNORE THIS PLEASE
 # # usaage
 # # create user
 # u1 = User(email="a@example.com", password="123")

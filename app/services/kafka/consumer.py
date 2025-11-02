@@ -1,10 +1,14 @@
 import asyncio
+import json
+
 from aiokafka import AIOKafkaConsumer, TopicPartition
+
 from app.core.conf import kafkaHost, kafkaPassword, kafkaUsername, saslKafka
-from app.core.logger import setup_logger
 from app.core.database import DbInstance
+from app.core.logger import setup_logger
 
 logger = setup_logger("kafka.consumer")
+
 
 class Consumer:
     def __init__(self):
@@ -20,16 +24,15 @@ class Consumer:
             auto_offset_reset="earliest",
         )
 
-        
     async def start(self, class_name, func_name: str):
         await self.consumer_client.start()
         tp = TopicPartition("MESSAGES", 0)
         try:
             async for msg in self.consumer_client:
                 try:
-                    data = msg.value.decode("utf-8")
+                    data = json.loads(msg.value.decode("utf-8"))
                     logger.info(f"Message Received: {data}")
-                    await DbInstance.process_db_sockets(class_name, func_name, data)
+                    await DbInstance.process_db_sockets(class_name, func_name, **data)
                 except Exception as e:
                     logger.error(f"Processing error: {str(e)}")
                     self.consumer_client.pause(tp)
@@ -39,7 +42,6 @@ class Consumer:
                     logger.info("Kafka Consumer resumed")
         finally:
             await self.consumer_client.stop()
-
 
 
 ConsumerClient = Consumer()

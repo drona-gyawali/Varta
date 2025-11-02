@@ -1,22 +1,21 @@
 from fastapi import FastAPI
-from fastapi.responses import FileResponse
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.api.v1 import auth, message
+from app.core.conf import origins
 from app.services.socket import SocketInit
-from fastapi.staticfiles import StaticFiles
-from app.api.v1 import auth
-import os
 
 app = FastAPI()
 
-
-app.mount("/static", StaticFiles(directory="frontend", html=True), name="static")
-
 varta = SocketInit.attachToServer(app)
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.include_router(auth.router)
-
-
-@app.get("/")
-def serve_frontend():
-    index_path = os.path.join("frontend", "index.html")
-    return FileResponse(index_path)
+app.include_router(message.router)

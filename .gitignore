@@ -14,8 +14,13 @@ wheels/
 ca.pem
 kafka.pem
 
-
-
 #logs file
 *.log* 
 roadmap.md
+
+#emulator files
+*.http
+
+
+#linter
+.ruff_cache

@@ -1,14 +1,15 @@
-from pydantic import BaseModel, EmailStr
 from datetime import datetime
+
+from pydantic import BaseModel, EmailStr
 
 
 class UserCreation(BaseModel):
-    email:EmailStr
-    password:str
+    email: EmailStr
+    password: str
+
 
 class ProfileDetails(BaseModel):
-    success:int
-    id:str
-    email:EmailStr
-    profileUrl:str
+    id: str
+    email: EmailStr
+    profileUrl: str
     createdAt: datetime

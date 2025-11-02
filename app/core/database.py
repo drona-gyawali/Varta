@@ -1,27 +1,31 @@
-from app.core.conf import DbInit, ssl_context
-from sqlalchemy.ext.asyncio import ( 
-    create_async_engine,
-    async_sessionmaker,
-    AsyncSession,
-)
-from sqlalchemy.orm import declarative_base
 from typing import Any, Awaitable, Callable
+
+from sqlalchemy.ext.asyncio import (
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
+from sqlalchemy.orm import DeclarativeMeta, declarative_base
+
+from app.core.conf import DbInit, ssl_context
 from app.core.logger import setup_logger
 
 logger = setup_logger("database")
 
+BASE: DeclarativeMeta = declarative_base()
+
+
 class DB:
     def __init__(self):
-        self._dburl:str = DbInit
-        self._base:Any = declarative_base()
+        self._dburl: str = DbInit
         self.engine = create_async_engine(
-            self._dburl, connect_args={"ssl":ssl_context}, echo=True
+            self._dburl, connect_args={"ssl": ssl_context}, echo=False
         )
 
     @property
-    def get_base(self):
-        return self._base
-    
+    def get_base(self) -> DeclarativeMeta:
+        return BASE
+
     def asyncSessionLocal(self):
         return async_sessionmaker(
             autocommit=False,
@@ -29,7 +33,7 @@ class DB:
             bind=self.engine,
             class_=AsyncSession,
         )
-    
+
     async def get_db(self):
         try:
             SessionFactory = self.asyncSessionLocal()
@@ -40,12 +44,10 @@ class DB:
                     await Session.close()
         except Exception as e:
             logger.error(f"Error | func=get_db | error={str(e)}")
-    
-    
+            raise
+
     async def process_db_sockets(
-        self, instance_class:Any,
-        method_name:str,
-        *args, **kwargs
+        self, instance_class: Any, method_name: str, *args, **kwargs
     ):
         try:
             async for db in self.get_db():
@@ -57,4 +59,3 @@ class DB:
 
 
 DbInstance = DB()
-

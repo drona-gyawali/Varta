@@ -1,9 +1,12 @@
-from typing import Type, TypeVar, Generic
+from typing import Generic, Type, TypeVar
+
 from pydantic import EmailStr
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy.orm import selectinload
 
 ModelType = TypeVar("ModelType")
+
 
 class BaseRepository(Generic[ModelType]):
     def __init__(self, model: Type[ModelType], db: AsyncSession):
@@ -17,27 +20,36 @@ class BaseRepository(Generic[ModelType]):
         await self.db.refresh(obj)
         return obj
 
-    async def get(self, id: str = None, email:EmailStr = None) -> ModelType | None:
+    async def get(self, id: str = None, email: EmailStr = None) -> ModelType | None:
         if id is None and email is None:
             return None
-        
+
         query = select(self.model)
         if id is not None:
-            query.where(self.model.id == id)
+            query = query.where(self.model.id == id)
         elif email is not None:
-            query.where(self.model.email == email)
+            query = query.where(self.model.email == email)
         result = await self.db.execute(query)
         return result.scalars().first()
-    
+
+    async def get_room_with_members(self, room_id: str):
+        query = (
+            select(self.model)
+            .options(
+                selectinload(self.model.members),
+                selectinload(self.model.messages),
+            )
+            .where(self.model.id == room_id)
+        )
+        result = await self.db.execute(query)
+        return result.scalars().first()
 
     async def get_all(self, id: str = None) -> ModelType | None:
         if id is None:
             return None
-        
         query = select(self.model).where(self.model.id == id)
         result = await self.db.execute(query)
         return result.scalars().first()
-
 
     async def update(self, id: str, obj_data: dict) -> ModelType | None:
         obj = await self.get(id)

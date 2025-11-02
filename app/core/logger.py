@@ -1,10 +1,11 @@
+import atexit
+import json
 import logging
 import logging.config
-from logging.handlers import TimedRotatingFileHandler, QueueHandler, QueueListener
 import queue
-import json
-import atexit
-from app.core.conf import LOG_FILE, ENV
+from logging.handlers import QueueHandler, QueueListener, TimedRotatingFileHandler
+
+from app.core.conf import ENV, LOG_FILE
 
 log_queue = queue.Queue(-1)
 
@@ -125,7 +126,6 @@ logging.config.dictConfig(LOGGING_CONFIG)
 listener = QueueListener(log_queue, console_handler, file_handler)
 listener.start()
 atexit.register(listener.stop)
-
 
 
 def setup_logger(name: str) -> logging.Logger:

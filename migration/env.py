@@ -1,15 +1,12 @@
 import asyncio
 from logging.config import fileConfig
 
-
 from alembic import context
-from sqlalchemy import pool
+from sqlalchemy import create_engine, pool
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from sqlalchemy import create_engine
 from app.core.conf import DbInit, ssl_context
-from app.core.database import DbInstance
-from app.models import message_model, auth_model
+from app.core.database import BASE
 
 config = context.config
 
@@ -17,7 +14,7 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-target_metadata = DbInstance.get_base.metadata
+target_metadata = BASE.metadata
 
 
 def get_url() -> str:
@@ -25,8 +22,7 @@ def get_url() -> str:
 
 
 connectable = create_engine(
-    get_url(),
-    connect_args={"sslmode": "require", "sslrootcert": ssl_context}
+    get_url(), connect_args={"sslmode": "require", "sslrootcert": ssl_context}
 )
 
 

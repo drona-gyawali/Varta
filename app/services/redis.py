@@ -1,10 +1,14 @@
+import json
+
 from redis.asyncio import Redis
+
 from app.core.conf import REDISCONF
 from app.core.logger import setup_logger
 
 logger = setup_logger("service.redis")
 
-class RedisService: 
+
+class RedisService:
     def __init__(self):
         self._publisher = Redis(
             host=REDISCONF.get("redisHost"),
@@ -19,17 +23,16 @@ class RedisService:
             password=REDISCONF.get("redisPassword"),
             decode_responses=True,
         )
-    
+
     @property
     def get_pub(self) -> Redis:
         """Return the publisher client"""
         return self._publisher
-    
+
     @property
     def get_sub(self) -> Redis:
         """Return the subscriber client"""
         return self._subscriber
-
 
     async def _redisSubscriberInit(self, io_emit):
         sub = self.get_sub.pubsub()
@@ -39,7 +42,9 @@ class RedisService:
             if message["type"] == "message":
                 data = message["data"]
                 logger.info(f"Message delivered by redis |  data={data}")
-                await io_emit.emit("chat_message", {"id": "Server", "msg": data})
+                await io_emit.emit(
+                    "chat_message", {"id": "Server", "msg": json.loads(data)}
+                )
 
 
 redisInit = RedisService()
