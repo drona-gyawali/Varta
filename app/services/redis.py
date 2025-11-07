@@ -24,6 +24,17 @@ class RedisService:
             decode_responses=True,
         )
 
+        self._connection = Redis(
+            host=REDISCONF.get("redisHost"),
+            port=int(REDISCONF.get("redisPort")),
+            password=REDISCONF.get("redisPassword"),
+            decode_responses=True,
+        )
+
+    @property
+    def get_connection(self) -> Redis:
+        return self._connection
+
     @property
     def get_pub(self) -> Redis:
         """Return the publisher client"""

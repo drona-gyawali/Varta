@@ -13,3 +13,7 @@ class ProfileDetails(BaseModel):
     email: EmailStr
     profileUrl: str
     createdAt: datetime
+
+
+class UpdateProfileurl(BaseModel):
+    profileUrl: str

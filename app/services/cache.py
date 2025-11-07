@@ -2,22 +2,16 @@ import json
 from typing import Any, Optional
 
 from fastapi.encoders import jsonable_encoder
-from redis.asyncio import Redis
 
-from app.core.conf import REDISCONF
 from app.core.logger import setup_logger
+from app.services.redis import redisInit
 
 logger = setup_logger("services.cache")
 
 
 class Cache:
     def __init__(self):
-        self.cache = Redis(
-            host=REDISCONF.get("redisHost"),
-            port=int(REDISCONF.get("redisPort")),
-            password=REDISCONF.get("redisPassword"),
-            decode_responses=True,
-        )
+        self.cache = redisInit.get_connection
 
     async def get_cache(self, key: str) -> Optional[Any]:
         """Retrieve a value from Redis by key."""

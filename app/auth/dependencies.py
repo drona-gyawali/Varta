@@ -30,5 +30,5 @@ async def get_current_user(
     if not user:
         logger.error(f"User not found with ID: {token_data.user_id}")
         raise HTTPException(status_code=401, detail="User not found")
-
+    request.state.user = user
     return user

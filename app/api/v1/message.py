@@ -1,12 +1,11 @@
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_user
-from app.core.database import DbInstance
 from app.core.logger import setup_logger
-from app.models.auth_model import User
+from app.core.ratelimiter import RateLimiters
+from app.dependency_manager import PrivateDeps
 from app.models.message_model import Message, Room
 from app.schemas import message
 from app.services.message.message import MessageService
@@ -14,7 +13,11 @@ from app.services.message.room import RoomService
 
 logger = setup_logger("api.v1.message")
 
-router = APIRouter(prefix="/api/v1", tags=["Message"])
+router = APIRouter(
+    prefix="/api/v1",
+    tags=["Message"],
+    dependencies=[Depends(get_current_user), Depends(RateLimiters.user_rate_limiter())],
+)
 
 
 # -----------------------------
@@ -23,19 +26,18 @@ router = APIRouter(prefix="/api/v1", tags=["Message"])
 @router.post("/create-rooms", status_code=status.HTTP_201_CREATED)
 async def create_room(
     data: message.CreateLink,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(DbInstance.get_db),
+    deps: PrivateDeps = Depends(),
 ):
     """Create a room to chat"""
     try:
-        user_id = current_user.id
+        user_id = deps.user.id
         if not user_id:
             return {
                 "failure": status.HTTP_401_UNAUTHORIZED,
                 "msg": "Unauthorized access forbidden",
             }
 
-        service = RoomService(Room, db)
+        service = RoomService(Room, deps.user.id)
         response = await service.add_room(data.room_name, data.is_private, user_id)
 
         if not response:
@@ -61,12 +63,11 @@ async def create_room(
 async def get_rooms(
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(DbInstance.get_db),
+    deps: PrivateDeps = Depends(),
 ):
     """List of rooms accessible to the user"""
     try:
-        user_id = current_user.id
+        user_id = deps.user.id
         print(user_id)
         if not user_id:
             return {
@@ -74,7 +75,7 @@ async def get_rooms(
                 "msg": "Unauthorized access",
             }
 
-        service = RoomService(Room, db)
+        service = RoomService(Room, deps.db)
         response = await service.get_room(user_id, limit, offset)
 
         if not response:
@@ -101,13 +102,12 @@ async def get_room_details(
     id: str,
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(DbInstance.get_db),
+    deps: PrivateDeps = Depends(),
 ):
     """Get details of a private room and its members"""
     try:
-        user_id = current_user.id
-        service = RoomService(Room, db)
+        user_id = deps.user.id
+        service = RoomService(Room, deps.db)
         response = await service.get_room_data(id, user_id, limit, offset)
         return {"success": status.HTTP_200_OK, "room_data": response}
 
@@ -126,13 +126,12 @@ async def get_room_details(
 @router.delete("/rooms/{id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_room(
     id: str,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(DbInstance.get_db),
+    deps: PrivateDeps = Depends(),
 ):
     """Delete Rooms of user by room_id"""
     try:
-        user_id = current_user.id
-        service = RoomService(Room, db)
+        user_id = deps.user.id
+        service = RoomService(Room, deps.db)
         response = await service.delete_room(id, user_id)
         if response:
             return {
@@ -154,19 +153,18 @@ async def delete_room(
 async def join_room(
     id: str,
     data: message.JoinRoom,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(DbInstance.get_db),
+    deps: PrivateDeps = Depends(),
 ):
     """Join a room using an invite token"""
     try:
-        user_id = current_user.id
+        user_id = deps.user.id
         if not user_id:
             return {
                 "failure": status.HTTP_401_UNAUTHORIZED,
                 "msg": "Unauthorized access",
             }
 
-        service = RoomService(Room, db)
+        service = RoomService(Room, deps.db)
         response = await service.join_room(id, user_id, data.invite_token)
 
         if not response:
@@ -199,13 +197,12 @@ async def join_room(
 @router.post("/rooms/{id}/invite", status_code=status.HTTP_200_OK)
 async def create_invitation_link(
     id: str,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(DbInstance.get_db),
+    deps: PrivateDeps = Depends(),
 ):
     """Generate an invitation token for a private room"""
     try:
-        user_id = current_user.id
-        service = RoomService(Room, db)
+        user_id = deps.user.id
+        service = RoomService(Room, deps.db)
         response = await service.create_invitation_link(id, user_id)
         return {
             "status": status.HTTP_200_OK if response else status.HTTP_400_BAD_REQUEST,
@@ -230,19 +227,18 @@ async def get_all_members(
     id: str,
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(DbInstance.get_db),
+    deps: PrivateDeps = Depends(),
 ):
     """List all members in a room"""
     try:
-        user_id = current_user.id
+        user_id = deps.user.id
         if not user_id:
             return {
                 "failure": status.HTTP_401_UNAUTHORIZED,
                 "msg": "Unauthorized access",
             }
 
-        service = RoomService(Room, db)
+        service = RoomService(Room, deps.db)
         response = await service.list_room_members(id, user_id, limit, offset)
 
         if not response:
@@ -269,19 +265,18 @@ async def get_room_messages(
     room_id: Optional[str] = Query(None, description="Filter messages by room ID"),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(DbInstance.get_db),
+    deps: PrivateDeps = Depends(),
 ):
     """Fetch messages for a specific room, with pagination support"""
     try:
-        user_id = current_user.id
+        user_id = deps.user.id
         if not user_id:
             return {
                 "failure": status.HTTP_401_UNAUTHORIZED,
                 "msg": "Unauthorized access",
             }
 
-        service = MessageService(Message, db)
+        service = MessageService(Message, deps.db)
         messages = await service.get_room_message(
             user_id=user_id, room_id=room_id, limit=limit, offset=offset
         )
@@ -305,19 +300,18 @@ async def get_room_messages(
 @router.post("/room/create-message", status_code=status.HTTP_201_CREATED)
 async def create_message(
     data: message.MessageCreation,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(DbInstance.get_db),
+    deps: PrivateDeps = Depends(),
 ):
     """Create user message"""
     try:
-        user_id = current_user.id
+        user_id = deps.user.id
         if not user_id:
             return {
                 "failure": status.HTTP_401_UNAUTHORIZED,
                 "msg": "Unauthorized access",
             }
 
-        service = MessageService(Message, db)
+        service = MessageService(Message, deps.db)
         new_message = await service.send_message(data.text, user_id, data.room_id)
         if not new_message:
             return {
@@ -345,19 +339,18 @@ async def create_message(
 async def access_private_rooms(
     room_id: str,
     token: str,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(DbInstance.get_db),
+    deps: PrivateDeps = Depends(),
 ):
     """Automatic join the room"""
     try:
-        user_id = current_user.id
+        user_id = deps.user.id
         if not user_id:
             return {
                 "failure": status.HTTP_401_UNAUTHORIZED,
                 "msg": "Unauthorized access",
             }
 
-        service = RoomService(Room, db)
+        service = RoomService(Room, deps.db)
         joined_room = await service.validate_invite_token(room_id, user_id, token)
         if not joined_room:
             return {

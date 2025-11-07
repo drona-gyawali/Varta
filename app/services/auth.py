@@ -94,3 +94,11 @@ class AuthService:
 
         except Exception as e:
             logger.error(f"Error | fx=profile_service | error={e}")
+
+    async def update_profile(self, id, obj_data):
+        try:
+            updated_content = await self.auth.update(id, obj_data)
+            return updated_content
+        except Exception as e:
+            logger.error(f"Error Occured | fx=update_profile | error={e}")
+            raise ValueError(f"Database Error | error={e}")
