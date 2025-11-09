@@ -66,6 +66,7 @@ origins = [
 ]
 
 
+## number of ec2 that is up
 MULTI_INSTANCE = os.getenv("MULTI_INSTANCE", "false").lower() == "true"
 
 
@@ -74,3 +75,12 @@ STORJ_SECRET_ACCESS_KEY = os.getenv("STORJ_SECRET_ACCESS_KEY")
 STORJ_ENDPOINT = os.getenv("STORJ_ENDPOINT")
 STORJ_BUCKET_NAME = os.getenv("STORJ_BUCKET_NAME")
 STORJ_BUCKET_OBJECT_URL = os.getenv("STORJ_BUCKET_OBJECT_URL")
+
+
+RABBITMQ_HOST = os.getenv("RABBITMQ_HOST")
+
+
+MAIL_HOST = os.getenv("MAIL_HOST")
+MAIL_PORT = os.getenv("MAIL_PORT")
+MAIL_EMAIL = os.getenv("MAIL_EMAIL")
+MAIL_PASS = os.getenv("MAIL_PASS")

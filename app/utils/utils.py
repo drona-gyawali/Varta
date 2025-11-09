@@ -1,5 +1,6 @@
 import msgpack
 from fastapi_limiter import FastAPILimiter
+from tasks import task_email
 
 from app.core.conf import STORJ_BUCKET_OBJECT_URL
 from app.core.logger import setup_logger
@@ -23,3 +24,8 @@ def construct_url(key, bucket_name):
 
 async def starter():
     await FastAPILimiter.init(redisInit.get_connection)
+
+
+def send_email(subject, email, body, html=True):
+    task = task_email.send(subject, email, body, html)
+    return task

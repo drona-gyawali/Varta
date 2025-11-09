@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List
 
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 
 
 class CreateLink(BaseModel):
@@ -66,3 +66,9 @@ class RoomMemberModel(BaseModel):
 class RoomMemberResponse(BaseModel):
     members: List[RoomMemberModel]
     pagination: PageMetadata
+
+
+class EmailSchema(BaseModel):
+    subject: str
+    recipients: EmailStr
+    body: str

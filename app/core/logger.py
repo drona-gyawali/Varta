@@ -8,7 +8,7 @@ def setup_logger(name: str) -> logging.Logger:
     Simple logger setup for async-friendly apps.
     """
     logger = logging.getLogger(name)
-    if not logger.hasHandlers():  # prevent adding multiple handlers
+    if not logger.hasHandlers():
         level = logging.DEBUG if ENV == "dev" else logging.INFO
         logger.setLevel(level)
 
